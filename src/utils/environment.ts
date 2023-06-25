@@ -1,4 +1,5 @@
 import { ChainId } from "@certusone/wormhole-sdk";
+import { ethers } from "ethers";
 
 let env: Environment | null = null;
 
@@ -12,14 +13,41 @@ export type ChainInfo = {
   chainName: string;
   nativeCurrencyName: string;
   nativeCurrencyDecimals: number;
+  nativeCurrencyUsdPrice: number;
   relayerContractAddress: string;
-  defaultRelayProviderContractAddress: string;
+  defaultDeliveryProviderContractAddress: string;
+  mockIntegrationAddress: string;
   rpcUrl: string;
 };
 
 const tiltEnv: Environment = {
-  chainInfos: [],
-  guardianRpcs: [],
+  chainInfos: [
+    {
+      chainId: 2 as ChainId,
+      chainName: "Eth-Tilt",
+      nativeCurrencyName: "ETH",
+      nativeCurrencyDecimals: 18,
+      nativeCurrencyUsdPrice: 1700,
+      relayerContractAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
+      defaultDeliveryProviderContractAddress:
+        "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+      mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
+      rpcUrl: "http://localhost:8545",
+    },
+    {
+      chainId: 4 as ChainId,
+      chainName: "BSC-Tilt",
+      nativeCurrencyName: "BNB",
+      nativeCurrencyDecimals: 18,
+      nativeCurrencyUsdPrice: 300,
+      relayerContractAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
+      defaultDeliveryProviderContractAddress:
+        "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+      mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
+      rpcUrl: "http://localhost:8546",
+    },
+  ],
+  guardianRpcs: ["http://localhost:7070"],
 };
 
 const testnetEnv: Environment = {
@@ -34,7 +62,7 @@ const mainnetEnv: Environment = {
 
 export function getEnvironment(): Environment {
   if (env === null) {
-    const envString = process.env.TARGET_ENVIRONMENT;
+    const envString = process.env.REACT_APP_TARGET_ENVIRONMENT;
     if (envString === undefined) {
       throw new Error("Environment variable TARGET_ENVIRONMENT not set");
     }
@@ -53,4 +81,8 @@ export function getEnvironment(): Environment {
   }
 
   return env;
+}
+
+export function getEthersProvider(chainInfo: ChainInfo) {
+  return new ethers.providers.JsonRpcProvider(chainInfo.rpcUrl);
 }

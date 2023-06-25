@@ -3,10 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@certusone/wormhole-sdk": "^0.9.18",
+    "@certusone/wormhole-sdk": "^0.9.19-beta.1",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/icons-material": "^5.11.16",
+    "@mui/material": "^5.13.5",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@typechain/ethers-v5": "^11.0.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.36",
     "@types/react": "^18.2.13",
@@ -18,9 +23,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start-mainnet": "TARGET_ENVIRONMENT=mainnet react-scripts start",
-    "start-tilt": "TARGET_ENVIRONMENT=tilt react-scripts start",
-    "start-testnet": "TARGET_ENVIRONMENT=testnet react-scripts start",
+    "start-mainnet": "REACT_APP_TARGET_ENVIRONMENT=mainnet react-scripts start",
+    "start-tilt": "REACT_APP_TARGET_ENVIRONMENT=tilt react-scripts start",
+    "start-testnet": "REACT_APP_TARGET_ENVIRONMENT=testnet react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
