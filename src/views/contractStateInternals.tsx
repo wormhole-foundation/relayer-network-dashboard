@@ -1,8 +1,9 @@
 import { useLogger } from "../context/LoggerContext";
 import LogViewer from "../components/logViewer";
 import { getEnvironment } from "../utils/environment";
+import ContractStates from "../components/contractStatusViewer";
 
-export default function ContractStateInternals() {
+export default function ContractStateView() {
   const env = getEnvironment();
   const { log, clear, logs } = useLogger();
   const pushLog = () => {
@@ -22,6 +23,8 @@ export default function ContractStateInternals() {
   return (
     <div>
       <button onClick={pushLog}>Push Log</button>
+      <button onClick={clear}>Clear Logs</button>
+      <ContractStates />
       <LogViewer />
     </div>
   );

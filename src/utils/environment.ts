@@ -86,3 +86,15 @@ export function getEnvironment(): Environment {
 export function getEthersProvider(chainInfo: ChainInfo) {
   return new ethers.providers.JsonRpcProvider(chainInfo.rpcUrl);
 }
+
+export function getChainInfo(chainId: ChainId): ChainInfo {
+  const output = getEnvironment().chainInfos.find(
+    (chainInfo) => chainInfo.chainId === chainId
+  );
+
+  if (output === undefined) {
+    throw new Error(`Unknown chainId ${chainId}`);
+  }
+
+  return output;
+}

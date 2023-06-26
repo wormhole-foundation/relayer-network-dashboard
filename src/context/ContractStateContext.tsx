@@ -11,6 +11,7 @@ import { get } from "http";
 import { BigNumber } from "ethers";
 import {
   ChainInfo,
+  getChainInfo,
   getEnvironment,
   getEthersProvider,
 } from "../utils/environment";
@@ -22,23 +23,30 @@ import {
   WormholeRelayer__factory,
 } from "@certusone/wormhole-sdk/lib/cjs/ethers-contracts";
 
-type WormholeRelayerContractState = {
+export type WormholeRelayerContractState = {
   chainId: number;
   contractAddress: string;
   defaultProvider: string;
   registeredContracts: { chainId: number; contract: string }[];
 };
 
-type DeliveryProviderContractState = {
+export type DeliveryProviderContractState = {
   chainId: number;
   contractAddress: string;
   rewardAddress: string;
+  owner: string;
+  pendingOwner: string;
+  pricingWallet: string;
   deliveryOverheads: { chainId: number; deliveryOverhead: BigNumber }[];
   supportedChains: { chainId: number; isSupported: boolean }[];
   targetChainAddresses: { chainId: number; whAddress: string }[];
   gasPrices: { chainId: number; gasPrice: BigNumber }[];
   weiPrices: { chainId: number; weiPrice: BigNumber }[];
-  owner: string;
+  maximumBudgets: { chainId: number; maximumBudget: BigNumber }[];
+  assetConversionBuffers: {
+    chainId: number;
+    assetConversionBuffer: { numerator: number; denominator: number };
+  }[];
 };
 
 interface ContractStateContext {
@@ -88,9 +96,9 @@ export const ContractStateProvider = ({
       if (cached && !forceRefresh) {
         return cached;
       } else {
-        const state: WormholeRelayerContractState = await getRelayerContract(
-          chainId,
-          forceRefresh
+        const state: WormholeRelayerContractState = await fetchRelayerContract(
+          getChainInfo(chainId),
+          log
         );
         setRelayerContractStates((old) => [...old, state]);
         return state;
@@ -111,7 +119,7 @@ export const ContractStateProvider = ({
         return cached;
       } else {
         const state: DeliveryProviderContractState =
-          await getDeliveryProviderContractState(chainId, forceRefresh);
+          await fetchDeliveryProviderContractState(getChainInfo(chainId), log);
         setDeliveryProviderContractStates((old) => [...old, state]);
         return state;
       }
@@ -139,7 +147,7 @@ export const useContractState = () => {
 };
 
 //This code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
-async function getRelayerContract(
+async function fetchRelayerContract(
   chainInfo: ChainInfo,
   log?: (value: string, type?: "error" | "info" | "success" | undefined) => void
 ): Promise<WormholeRelayerContractState> {
@@ -195,7 +203,7 @@ export async function getWormholeRelayer(
 }
 
 //this code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
-async function getDeliveryProviderContractState(
+async function fetchDeliveryProviderContractState(
   chainInfo: ChainInfo,
   log?: (value: string, type?: "error" | "info" | "success" | undefined) => void
 ): Promise<DeliveryProviderContractState> {
@@ -232,7 +240,15 @@ async function getDeliveryProviderContractState(
     }[] = [];
     const gasPrices: { chainId: number; gasPrice: BigNumber }[] = [];
     const weiPrices: { chainId: number; weiPrice: BigNumber }[] = [];
+    const maximumBudgets: { chainId: number; maximumBudget: BigNumber }[] = [];
+    const assetConversionBuffers: {
+      chainId: number;
+      assetConversionBuffer: { numerator: number; denominator: number };
+    }[] = [];
+
     const owner: string = await deliveryProvider.owner();
+    const pendingOwner: string = await deliveryProvider.pendingOwner();
+    const pricingWallet: string = await deliveryProvider.pricingWallet();
 
     for (const chainInfo of env.chainInfos) {
       supportedChains.push({
@@ -264,6 +280,19 @@ async function getDeliveryProviderContractState(
           ethers.utils.parseEther("1")
         ),
       });
+      maximumBudgets.push({
+        chainId: chainInfo.chainId,
+        maximumBudget: await deliveryProvider.maximumBudget(chainInfo.chainId),
+      });
+      const assetConversionBuffer =
+        await deliveryProvider.assetConversionBuffer(chainInfo.chainId);
+      assetConversionBuffers.push({
+        chainId: chainInfo.chainId,
+        assetConversionBuffer: {
+          numerator: assetConversionBuffer[0],
+          denominator: assetConversionBuffer[1],
+        },
+      });
     }
 
     return {
@@ -276,6 +305,10 @@ async function getDeliveryProviderContractState(
       gasPrices,
       weiPrices,
       owner,
+      pendingOwner,
+      pricingWallet,
+      maximumBudgets,
+      assetConversionBuffers,
     };
   } catch (e: any) {
     log &&
