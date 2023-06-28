@@ -47,32 +47,62 @@ function SingleChainViewer(props: { chainId: number }) {
 
   const onExpand = useCallback(
     (event: any, expanded: boolean) => {
+      console.log("expanded", expanded);
       if (expanded) {
         setRelayerLoading(true);
         setDeliveryProviderLoading(true);
         setError("");
         getRelayerContract(props.chainId as ChainId)
-          .then(() => {
+          .then((result) => {
+            console.log("got relayer");
             setRelayerLoading(false);
-            setRelayer(relayer);
+            setRelayer(result);
           })
           .catch((e) => {
-            setError(e.message);
+            setError(
+              e && e.message
+                ? e.message
+                : "An error occurred while fetching the relayer contract state. Try again."
+            );
             setRelayerLoading(false);
           });
         getDeliveryProviderContractState(props.chainId as ChainId)
-          .then(() => {
+          .then((result) => {
+            console.log("got delivery provider");
             setDeliveryProviderLoading(false);
-            setDeliveryProvider(deliveryProvider);
+            setDeliveryProvider(result);
           })
           .catch((e) => {
-            setError(e.message);
+            setError(
+              e && e.message
+                ? e.message
+                : "An error occurred while fetching the delivery provider contract state. Try again."
+            );
             setDeliveryProviderLoading(false);
           });
       }
     },
     [props.chainId, getRelayerContract, getDeliveryProviderContractState]
   );
+
+  let displayedContent: any = "No Content";
+
+  console.log("relayer", relayer);
+  console.log("deliveryProvider", deliveryProvider);
+
+  if (error) {
+    displayedContent = <Typography>{"Error: " + error}</Typography>;
+  } else if (relayerLoading) {
+    displayedContent = <Typography>Loading relayer...</Typography>;
+  } else if (deliveryProviderLoading) {
+    displayedContent = <Typography>Loading delivery provider...</Typography>;
+  } else if (relayer && deliveryProvider) {
+    displayedContent = (
+      <DisplayContracts relayer={relayer} deliveryProvider={deliveryProvider} />
+    );
+  } else {
+    displayedContent = <Typography>Unexpected Error Occurred</Typography>;
+  }
 
   return (
     <Accordion onChange={onExpand}>
@@ -83,22 +113,7 @@ function SingleChainViewer(props: { chainId: number }) {
       >
         <Typography>{chainInfo.chainId + " " + chainInfo.chainName}</Typography>
       </AccordionSummary>
-      <AccordionDetails>
-        {error ? (
-          <Typography>{error}</Typography>
-        ) : relayerLoading ? (
-          <Typography>Loading relayer...</Typography>
-        ) : deliveryProviderLoading ? (
-          <Typography>Loading delivery provider...</Typography>
-        ) : relayer && deliveryProvider ? (
-          <DisplayContracts
-            relayer={relayer}
-            deliveryProvider={deliveryProvider}
-          />
-        ) : (
-          <Typography>Unexpected Error</Typography>
-        )}
-      </AccordionDetails>
+      <AccordionDetails>{displayedContent}</AccordionDetails>
     </Accordion>
   );
 }

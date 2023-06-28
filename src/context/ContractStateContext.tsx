@@ -72,6 +72,9 @@ const ContractStateContext = React.createContext<ContractStateContext>({
   },
 });
 
+const RELAYER_CONTEXT = "GetRelayerContractState";
+const DELIVERY_PROVIDER_CONTEXT = "GetDeliveryProviderContractState";
+
 export const ContractStateProvider = ({
   children,
 }: {
@@ -87,7 +90,10 @@ export const ContractStateProvider = ({
 
   const getRelayerContract = useCallback(
     async (chainId: ChainId, forceRefresh?: boolean) => {
-      log("Calling getRelayerContract with chainId: " + chainId);
+      log(
+        "Calling getRelayerContract with chainId: " + chainId,
+        RELAYER_CONTEXT
+      );
 
       const cached = relayerContractStates.find(
         (state) => state.chainId === chainId
@@ -109,7 +115,10 @@ export const ContractStateProvider = ({
 
   const getDeliveryProviderContractState = useCallback(
     async (chainId: ChainId, forceRefresh?: boolean) => {
-      log("Calling getDeliveryProviderContractState with chainId: " + chainId);
+      log(
+        "Calling getDeliveryProviderContractState with chainId: " + chainId,
+        DELIVERY_PROVIDER_CONTEXT
+      );
 
       const cached = deliveryProviderContractStates.find(
         (state) => state.chainId === chainId
@@ -132,7 +141,7 @@ export const ContractStateProvider = ({
       getRelayerContract,
       getDeliveryProviderContractState,
     }),
-    [logs, clear, log]
+    [logs, clear, log, getRelayerContract, getDeliveryProviderContractState]
   );
 
   return (
@@ -149,12 +158,16 @@ export const useContractState = () => {
 //This code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
 async function fetchRelayerContract(
   chainInfo: ChainInfo,
-  log?: (value: string, type?: "error" | "info" | "success" | undefined) => void
+  log?: (
+    value: string,
+    context?: string,
+    type?: "error" | "info" | "success" | undefined
+  ) => void
 ): Promise<WormholeRelayerContractState> {
   try {
     const env = getEnvironment();
     const contractAddress = chainInfo.relayerContractAddress;
-    log && log("Querying " + contractAddress);
+    log && log("Querying " + contractAddress, RELAYER_CONTEXT);
 
     const provider = getEthersProvider(chainInfo);
 
@@ -167,6 +180,7 @@ async function fetchRelayerContract(
 
     const registeredContracts: { chainId: number; contract: string }[] = [];
 
+    log && log("Querying registered contracts", RELAYER_CONTEXT);
     for (const chainInfo of env.chainInfos) {
       registeredContracts.push({
         chainId: chainInfo.chainId,
@@ -177,8 +191,20 @@ async function fetchRelayerContract(
         ).toString(),
       });
     }
+    log &&
+      log(
+        "Registered contracts: " + JSON.stringify(registeredContracts),
+        RELAYER_CONTEXT
+      );
 
+    log && log("Querying default provider", RELAYER_CONTEXT);
     const defaultProvider = await coreRelayer.getDefaultDeliveryProvider();
+    log && log("Default provider: " + defaultProvider, RELAYER_CONTEXT);
+    log &&
+      log(
+        "Finished querying relayer contract for chain " + chainInfo.chainId,
+        RELAYER_CONTEXT
+      );
     return {
       chainId: chainInfo.chainId,
       contractAddress,
@@ -187,8 +213,12 @@ async function fetchRelayerContract(
     };
   } catch (e: any) {
     log &&
-      log("Failed to gather status for chain " + chainInfo.chainId, "error");
-    log && log(e.toString(), "error");
+      log(
+        "Failed to gather status for chain " + chainInfo.chainId,
+        RELAYER_CONTEXT,
+        "error"
+      );
+    log && log(e.toString(), RELAYER_CONTEXT, "error");
   }
 
   return Promise.reject();
@@ -205,11 +235,18 @@ export async function getWormholeRelayer(
 //this code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
 async function fetchDeliveryProviderContractState(
   chainInfo: ChainInfo,
-  log?: (value: string, type?: "error" | "info" | "success" | undefined) => void
+  log?: (
+    value: string,
+    context?: string,
+    type?: "error" | "info" | "success" | undefined
+  ) => void
 ): Promise<DeliveryProviderContractState> {
-  console.log(
-    "Gathering relay provider contract status for chain " + chainInfo.chainId
-  );
+  log &&
+    log(
+      "Gathering delivery provider contract status for chain " +
+        chainInfo.chainId,
+      DELIVERY_PROVIDER_CONTEXT
+    );
 
   try {
     const env = getEnvironment();
@@ -220,12 +257,20 @@ async function fetchDeliveryProviderContractState(
     );
     const contractAddress = chainInfo.defaultDeliveryProviderContractAddress;
 
+    log &&
+      log(
+        "Connected to " + contractAddress + " on chain " + chainInfo.chainId,
+        DELIVERY_PROVIDER_CONTEXT
+      );
+
     // This is excessive to always do, but can be uncommented if needed.
     // console.log("Querying Relay Provider for code");
     // const codeReceipt = await provider.getCode(contractAddress);
     //console.log("Code: " + codeReceipt);
 
+    log && log("Querying reward address", DELIVERY_PROVIDER_CONTEXT);
     const rewardAddress = await deliveryProvider.getRewardAddress();
+    log && log("Reward address: " + rewardAddress, DELIVERY_PROVIDER_CONTEXT);
     const supportedChains: {
       chainId: number;
       isSupported: boolean;
@@ -246,44 +291,110 @@ async function fetchDeliveryProviderContractState(
       assetConversionBuffer: { numerator: number; denominator: number };
     }[] = [];
 
+    log && log("Querying owner", DELIVERY_PROVIDER_CONTEXT);
     const owner: string = await deliveryProvider.owner();
+    log && log("Owner: " + owner, DELIVERY_PROVIDER_CONTEXT);
+    log && log("Querying pending owner", DELIVERY_PROVIDER_CONTEXT);
     const pendingOwner: string = await deliveryProvider.pendingOwner();
+    log && log("Pending owner: " + pendingOwner, DELIVERY_PROVIDER_CONTEXT);
+    log && log("Querying pricing wallet", DELIVERY_PROVIDER_CONTEXT);
     const pricingWallet: string = await deliveryProvider.pricingWallet();
+    log && log("Pricing wallet: " + pricingWallet, DELIVERY_PROVIDER_CONTEXT);
 
     for (const chainInfo of env.chainInfos) {
+      log &&
+        log(
+          "Querying isSupported chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const isSupported = await deliveryProvider.isChainSupported(
+        chainInfo.chainId
+      );
       supportedChains.push({
         chainId: chainInfo.chainId,
-        isSupported: await deliveryProvider.isChainSupported(chainInfo.chainId),
+        isSupported,
       });
+      log && log("isSupported: " + isSupported, DELIVERY_PROVIDER_CONTEXT);
 
+      log &&
+        log(
+          "Querying targetChainAddress chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const whAddress = await deliveryProvider.getTargetChainAddress(
+        chainInfo.chainId
+      );
       targetChainAddresses.push({
         chainId: chainInfo.chainId,
-        whAddress: await deliveryProvider.getTargetChainAddress(
-          chainInfo.chainId
-        ),
+        whAddress,
       });
+      log &&
+        log(
+          "TargetChainAddress whFormat: " + whAddress,
+          DELIVERY_PROVIDER_CONTEXT
+        );
 
+      log &&
+        log(
+          "Querying deliveryOverhead chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const deliveryOverhead = await deliveryProvider.quoteDeliveryOverhead(
+        chainInfo.chainId
+      );
       deliveryOverheads.push({
         chainId: chainInfo.chainId,
-        deliveryOverhead: await deliveryProvider.quoteDeliveryOverhead(
-          chainInfo.chainId
-        ),
+        deliveryOverhead,
       });
+      log &&
+        log("DeliveryOverhead: " + deliveryOverhead, DELIVERY_PROVIDER_CONTEXT);
+
+      log &&
+        log(
+          "Querying gasPrice chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const gasPrice = await deliveryProvider.quoteGasPrice(chainInfo.chainId);
       gasPrices.push({
         chainId: chainInfo.chainId,
-        gasPrice: await deliveryProvider.quoteGasPrice(chainInfo.chainId),
+        gasPrice,
       });
+      log && log("GasPrice: " + gasPrice, DELIVERY_PROVIDER_CONTEXT);
+
+      log &&
+        log(
+          "Querying weiPrice chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const weiPrice = await deliveryProvider.quoteAssetConversion(
+        chainInfo.chainId,
+        ethers.utils.parseEther("1")
+      );
       weiPrices.push({
         chainId: chainInfo.chainId,
-        weiPrice: await deliveryProvider.quoteAssetConversion(
-          chainInfo.chainId,
-          ethers.utils.parseEther("1")
-        ),
+        weiPrice,
       });
+      log && log("WeiPrice: " + weiPrice, DELIVERY_PROVIDER_CONTEXT);
+
+      log &&
+        log(
+          "Querying maximumBudget chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
+      const maximumBudget = await deliveryProvider.maximumBudget(
+        chainInfo.chainId
+      );
       maximumBudgets.push({
         chainId: chainInfo.chainId,
-        maximumBudget: await deliveryProvider.maximumBudget(chainInfo.chainId),
+        maximumBudget,
       });
+      log && log("MaximumBudget: " + maximumBudget, DELIVERY_PROVIDER_CONTEXT);
+
+      log &&
+        log(
+          "Querying assetConversionBuffer chain " + chainInfo.chainId,
+          DELIVERY_PROVIDER_CONTEXT
+        );
       const assetConversionBuffer =
         await deliveryProvider.assetConversionBuffer(chainInfo.chainId);
       assetConversionBuffers.push({
@@ -293,6 +404,11 @@ async function fetchDeliveryProviderContractState(
           denominator: assetConversionBuffer[1],
         },
       });
+      log &&
+        log(
+          "AssetConversionBuffer: " + assetConversionBuffer,
+          DELIVERY_PROVIDER_CONTEXT
+        );
     }
 
     return {
@@ -315,9 +431,10 @@ async function fetchDeliveryProviderContractState(
       log(
         "Failed to gather delivery provider contract status for chain " +
           chainInfo.chainId,
+        DELIVERY_PROVIDER_CONTEXT,
         "error"
       );
-    log && log(e.toString(), "error");
+    log && log(e.toString(), DELIVERY_PROVIDER_CONTEXT, "error");
   }
 
   return Promise.reject();

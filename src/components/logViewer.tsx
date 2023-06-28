@@ -11,7 +11,14 @@ export default function LogViewer() {
   const { log, clear, logs } = useLogger();
 
   const logContent = logs.map((log, index) => {
-    return <Typography key={index}>{log}</Typography>;
+    return (
+      <Typography
+        key={index}
+        style={log.type == "error" ? { color: "red" } : {}}
+      >
+        {(log.context || "Default") + ": " + log.value}
+      </Typography>
+    );
   });
 
   return (
