@@ -1,4 +1,5 @@
-import { ChainId } from "@certusone/wormhole-sdk";
+import { ChainId, Network } from "@certusone/wormhole-sdk";
+import { NetworkCell } from "@mui/icons-material";
 import { ethers } from "ethers";
 
 let env: Environment | null = null;
@@ -6,6 +7,7 @@ let env: Environment | null = null;
 export type Environment = {
   chainInfos: ChainInfo[];
   guardianRpcs: string[];
+  network: Network;
 };
 
 export type ChainInfo = {
@@ -16,11 +18,13 @@ export type ChainInfo = {
   nativeCurrencyUsdPrice: number;
   relayerContractAddress: string;
   defaultDeliveryProviderContractAddress: string;
+  coreBridgeAddress: string;
   mockIntegrationAddress: string;
   rpcUrl: string;
 };
 
 const tiltEnv: Environment = {
+  network: "DEVNET",
   chainInfos: [
     {
       chainId: 2 as ChainId,
@@ -31,6 +35,7 @@ const tiltEnv: Environment = {
       relayerContractAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
       defaultDeliveryProviderContractAddress:
         "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+      coreBridgeAddress: "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550",
       mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
       rpcUrl: "http://localhost:8545",
     },
@@ -43,19 +48,22 @@ const tiltEnv: Environment = {
       relayerContractAddress: "0x53855d4b64E9A3CF59A84bc768adA716B5536BC5",
       defaultDeliveryProviderContractAddress:
         "0x1ef9e15c3bbf0555860b5009B51722027134d53a",
+      coreBridgeAddress: "0xC89Ce4735882C9F0f0FE26686c53074E09B0D550",
       mockIntegrationAddress: "0x0eb0dD3aa41bD15C706BC09bC03C002b7B85aeAC",
       rpcUrl: "http://localhost:8546",
     },
   ],
-  guardianRpcs: ["http://localhost:7070"],
+  guardianRpcs: ["http://localhost:7071"],
 };
 
 const testnetEnv: Environment = {
+  network: "TESTNET",
   chainInfos: [],
   guardianRpcs: [],
 };
 
 const mainnetEnv: Environment = {
+  network: "MAINNET",
   chainInfos: [],
   guardianRpcs: [],
 };

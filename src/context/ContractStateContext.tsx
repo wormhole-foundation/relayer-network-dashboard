@@ -268,9 +268,6 @@ async function fetchDeliveryProviderContractState(
     // const codeReceipt = await provider.getCode(contractAddress);
     //console.log("Code: " + codeReceipt);
 
-    log && log("Querying reward address", DELIVERY_PROVIDER_CONTEXT);
-    const rewardAddress = await deliveryProvider.getRewardAddress();
-    log && log("Reward address: " + rewardAddress, DELIVERY_PROVIDER_CONTEXT);
     const supportedChains: {
       chainId: number;
       isSupported: boolean;
@@ -300,6 +297,9 @@ async function fetchDeliveryProviderContractState(
     log && log("Querying pricing wallet", DELIVERY_PROVIDER_CONTEXT);
     const pricingWallet: string = await deliveryProvider.pricingWallet();
     log && log("Pricing wallet: " + pricingWallet, DELIVERY_PROVIDER_CONTEXT);
+    log && log("Querying reward address", DELIVERY_PROVIDER_CONTEXT);
+    const rewardAddress = await deliveryProvider.getRewardAddress();
+    log && log("Reward address: " + rewardAddress, DELIVERY_PROVIDER_CONTEXT);
 
     for (const chainInfo of env.chainInfos) {
       log &&
@@ -444,6 +444,6 @@ export async function getDeliveryProviderContract(
   chain: ChainInfo,
   provider: ethers.providers.StaticJsonRpcProvider
 ): Promise<DeliveryProvider> {
-  const thisChainsRelayer = chain.relayerContractAddress;
+  const thisChainsRelayer = chain.defaultDeliveryProviderContractAddress;
   return DeliveryProvider__factory.connect(thisChainsRelayer, provider);
 }

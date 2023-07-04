@@ -2,6 +2,8 @@ import { useLogger } from "../context/LoggerContext";
 import LogViewer from "../components/logViewer";
 import { getEnvironment } from "../utils/environment";
 import ContractStates from "../components/contractStatusViewer";
+import DeliveryStatus from "../components/DeliveryStatus";
+import EthereumSignerKey from "../components/EthereumSignerKey";
 
 export default function ContractStateView() {
   const env = getEnvironment();
@@ -21,10 +23,13 @@ export default function ContractStateView() {
   //TODO dump contract state into persisted logger object
 
   return (
-    <div>
-      <button onClick={pushLog}>Push Log</button>
-      <button onClick={clear}>Clear Logs</button>
+    <div style={{ padding: "10px", margin: "10px" }}>
+      <EthereumSignerKey />
+      <div style={{ height: "10px" }} />
+      <DeliveryStatus />
+      <div style={{ height: "10px" }} />
       <ContractStates />
+      <div style={{ height: "10px" }} />
       <LogViewer />
     </div>
   );

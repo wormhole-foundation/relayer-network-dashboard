@@ -14,7 +14,13 @@ export default function LogViewer() {
     return (
       <Typography
         key={index}
-        style={log.type == "error" ? { color: "red" } : {}}
+        style={
+          log.type == "error"
+            ? { color: "red" }
+            : log.type == "success"
+            ? { color: "green" }
+            : {}
+        }
       >
         {(log.context || "Default") + ": " + log.value}
       </Typography>
@@ -36,7 +42,7 @@ export default function LogViewer() {
           <Typography variant="h5">Persistent Logs</Typography>
         </AccordionSummary>
         <AccordionDetails>
-          <div style={{ maxHeight: "800px", overflow: "auto" }}>
+          <div style={{ maxHeight: "600px", overflow: "auto" }}>
             {logs.length === 0 ? (
               <Typography>No logs to display.</Typography>
             ) : (

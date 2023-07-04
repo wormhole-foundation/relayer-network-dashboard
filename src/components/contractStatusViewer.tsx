@@ -122,10 +122,12 @@ function DisplayContracts(props: {
   relayer: WormholeRelayerContractState;
   deliveryProvider: DeliveryProviderContractState;
 }) {
+  const spacer = <div style={{ height: "10px" }}></div>;
   return (
     <div style={{ display: "flex" }}>
-      <div>
-        <Typography>Relayer</Typography>
+      <div style={{ margin: "10px" }}>
+        <Typography variant="h6">Relayer</Typography>
+        {spacer}
         <Typography>Chain ID: {props.relayer.chainId}</Typography>
         <Typography>
           Contract Address: {props.relayer.contractAddress}
@@ -133,17 +135,19 @@ function DisplayContracts(props: {
         <Typography>
           Default Provider: {props.relayer.defaultProvider}
         </Typography>
+        {spacer}
         <Typography>Registered Contracts:</Typography>
         {props.relayer.registeredContracts.map((contract) => {
           return (
             <Typography>
-              {contract.chainId} {contract.contract}
+              {contract.chainId + ": " + contract.contract}
             </Typography>
           );
         })}
       </div>
-      <div>
-        <Typography>Delivery Provider</Typography>
+      <div style={{ margin: "10px" }}>
+        <Typography variant="h6">Delivery Provider</Typography>
+        {spacer}
         <Typography>Chain ID: {props.deliveryProvider.chainId}</Typography>
         <Typography>
           Contract Address: {props.deliveryProvider.contractAddress}
@@ -158,6 +162,7 @@ function DisplayContracts(props: {
         <Typography>
           Pricing Wallet: {props.deliveryProvider.pricingWallet}
         </Typography>
+        {spacer}
         <Typography>Delivery Overheads:</Typography>
         {props.deliveryProvider.deliveryOverheads.map((overhead) => {
           return (
@@ -166,6 +171,7 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Supported Chains :</Typography>
         {props.deliveryProvider.supportedChains.map((chain) => {
           return (
@@ -174,6 +180,7 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Target Chain Addresses</Typography>
         {props.deliveryProvider.targetChainAddresses.map((address) => {
           return (
@@ -182,6 +189,7 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Gas Prices</Typography>
         {props.deliveryProvider.gasPrices.map((gasPrice) => {
           return (
@@ -190,6 +198,7 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Native Prices</Typography>
         {props.deliveryProvider.weiPrices.map((nativePrice) => {
           return (
@@ -198,6 +207,7 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Maximum Budgets</Typography>
         {props.deliveryProvider.maximumBudgets.map((budget) => {
           return (
@@ -206,11 +216,15 @@ function DisplayContracts(props: {
             </Typography>
           );
         })}
+        {spacer}
         <Typography>Asset Conversion Buffers</Typography>
         {props.deliveryProvider.assetConversionBuffers.map((buffer) => {
           return (
             <Typography>
-              {buffer.chainId + " : "} {buffer.assetConversionBuffer.toString()}
+              {buffer.chainId + " : "}{" "}
+              {buffer.assetConversionBuffer.numerator.toString() +
+                "/" +
+                buffer.assetConversionBuffer.denominator.toString()}
             </Typography>
           );
         })}
