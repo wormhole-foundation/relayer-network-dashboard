@@ -5,11 +5,13 @@ import {
   relayer,
   tryNativeToHexString,
 } from "@certusone/wormhole-sdk";
-import { getChainInfo, getEnvironment } from "../utils/environment";
+import { getChainInfo } from "../utils/environment";
 import ChainSelector from "./chainSelector";
 import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Button,
+  CircularProgress,
   Divider,
   Paper,
   TextField,
@@ -20,16 +22,21 @@ import {
 import {
   DeliveryInfo,
   DeliveryInstruction,
+  DeliveryTargetInfo,
   RedeliveryInstruction,
 } from "@certusone/wormhole-sdk/lib/cjs/relayer";
 import {
+  getDeliveryStatusByVaa,
   getGenericRelayerVaasFromTransaction,
   getVaa,
   isRedelivery,
+  manualDeliver,
   parseGenericRelayerVaa,
 } from "../utils/VaaUtils";
 import { env } from "process";
 import { useLogger } from "../context/LoggerContext";
+import { useEnvironment } from "../context/EnvironmentContext";
+import { useEthereumProvider } from "../context/EthereumProviderContext";
 
 //test tx hash 0xcf66519f71be66c7ab5582e864a37d686c6164a32b3df22c89b32119ecfcfc5e
 //test sequence 1
@@ -39,7 +46,7 @@ import { useLogger } from "../context/LoggerContext";
 // 01000000000200d92d417b5f6a20e998652d952f3af3926572f7fd143bb7ad393355f8d1bef64e65ed3f4cff4024fec68fb5f47bf557cb435801dd3896b4a9893a3b4cb3603250000147243d7b7b0e4360b3d918b1cf8a9f0cbbd95e42bf14989ecd4319a57726fab4361ab4da00534875ede2cc2e3ac13cb25a43dd583eaa2d654bbc254080a64b710100000263000000000002000000000000000000000000e66c1bc1b369ef4f376b84373e3aa004e8f4c0830000000000000008c802010002000000000000000000000000e66c1bc1b369ef4f376b84373e3aa004e8f4c083000000000000000700040000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007a1200000000000000000000000000000000000000000000000000000004285e604920000000000000000000000001ef9e15c3bbf0555860b5009b51722027134d53a00000000000000000000000090f8bf6a479f320ead074411a4b0e7944ea8c9c1
 
 export default function DeliveryStatus() {
-  const environment = getEnvironment();
+  const { environment } = useEnvironment();
   const { log, clear, logs } = useLogger();
   const [chain, setChain] = useState<ChainId>(
     environment.chainInfos[0].chainId
@@ -58,7 +65,7 @@ export default function DeliveryStatus() {
     ? tryNativeToHexString(targetContract, "ethereum")
     : "Error, unconfigured";
 
-  const [vaaResults, setVaaResults] = useState<ParsedVaa[]>([]);
+  const [vaaResults, setVaaResults] = useState<Uint8Array[]>([]);
 
   const handleChange = (
     event: React.MouseEvent<HTMLElement>,
@@ -91,7 +98,7 @@ export default function DeliveryStatus() {
       setLoading(true);
       getGenericRelayerVaasFromTransaction(
         environment,
-        getChainInfo(chain as ChainId),
+        getChainInfo(environment, chain as ChainId),
         txHash
       )
         .then((vaas) => {
@@ -124,7 +131,12 @@ export default function DeliveryStatus() {
           );
         setError("");
         setLoading(true);
-        getVaa(environment, getChainInfo(chain as ChainId), emitter, sequence)
+        getVaa(
+          environment,
+          getChainInfo(environment, chain as ChainId),
+          emitter,
+          sequence
+        )
           .then((vaa) => {
             log &&
               log(
@@ -177,9 +189,7 @@ export default function DeliveryStatus() {
             trimmed.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
           );
 
-          //pipe it into the parseGenericRelayerVaa function
-          const parsedVaa = parseVaa(vaaBytes);
-          setVaaResults([parsedVaa]);
+          setVaaResults([vaaBytes]);
         } catch (e) {
           setError("Invalid VAA");
         }
@@ -187,12 +197,12 @@ export default function DeliveryStatus() {
     } else {
       setError("Invalid query type");
     }
-  }, [txHash, sequence, emitter, chain, vaaRaw]);
+  }, [txHash, sequence, emitter, chain, vaaRaw, environment, queryType]);
 
   const vaaReaders = vaaResults.length > 0 && (
     <div style={{ margin: "10px" }}>
       {vaaResults.map((vaa) => (
-        <VaaReader vaa={vaa} />
+        <VaaReader rawVaa={vaa} />
       ))}
     </div>
   );
@@ -257,51 +267,10 @@ export default function DeliveryStatus() {
   );
 }
 
-export function VaaReader({ vaa }: { vaa: ParsedVaa }) {
+export function VaaReader({ rawVaa }: { rawVaa: Uint8Array }) {
+  const vaa = parseVaa(rawVaa);
   const info: DeliveryInstruction | RedeliveryInstruction | null =
     parseGenericRelayerVaa(vaa);
-
-  const [deliveryInfos, setDeliveryInfos] = useState<
-    relayer.DeliveryTargetInfo[]
-  >([]);
-  const [deliveryInfoError, setDeliveryInfoError] = useState("");
-  const [isLoadingDeliveryInfo, setIsLoadingDeliveryInfo] = useState(false);
-
-  const [manualDeliverResult, setManualDeliverResult] = useState("");
-  const [manualDeliverError, setManualDeliverError] = useState("");
-  const [isLoadingManualDeliver, setIsLoadingManualDeliver] = useState(false);
-
-  const onloadDeliveryInfo = useCallback(async () => {
-    if (info) {
-      setIsLoadingDeliveryInfo(true);
-      setDeliveryInfoError("");
-      try {
-        //TODO: get delivery info
-        const result = null;
-        //setDeliveryInfos(result);
-      } catch (e: any) {
-        setDeliveryInfoError(e.message);
-      } finally {
-        setIsLoadingDeliveryInfo(false);
-      }
-    }
-  }, [info]);
-
-  const onManualDeliver = useCallback(async () => {
-    if (info) {
-      setIsLoadingManualDeliver(true);
-      setManualDeliverError("");
-      try {
-        //TODO: manual deliver
-        const result = null;
-        //setManualDeliverResult(result);
-      } catch (e: any) {
-        setManualDeliverError(e.message);
-      } finally {
-        setIsLoadingManualDeliver(false);
-      }
-    }
-  }, [info]);
 
   const vaaHeaderInfo = (
     <div style={{ margin: "10px" }}>
@@ -316,6 +285,8 @@ export function VaaReader({ vaa }: { vaa: ParsedVaa }) {
       <Typography>Timestamp: {vaa.timestamp.toString()}</Typography>
     </div>
   );
+
+  const isDelivery = info && !isRedelivery(info);
 
   const vaaBodyInfo =
     info == null ? (
@@ -335,6 +306,8 @@ export function VaaReader({ vaa }: { vaa: ParsedVaa }) {
       {vaaHeaderInfo}
       <div style={{ height: "10px" }} />
       {vaaBodyInfo}
+      {isDelivery && <PullDeliveryInfo rawVaa={rawVaa} />}
+      {isDelivery && <ManualDeliverDeliveryVaa rawVaa={rawVaa} />}
     </div>
   );
 }
@@ -438,6 +411,226 @@ export function DeliveryInstructionDisplay({
       <Typography>
         {"Payload: " + Buffer.from(instruction.payload).toString("hex")}
       </Typography>
+    </div>
+  );
+}
+
+export function PullDeliveryInfo({ rawVaa }: { rawVaa: Uint8Array }) {
+  const deliveryVaa = parseVaa(rawVaa);
+  const { environment } = useEnvironment();
+  const [blockStart, setBlockStart] = useState("-2048");
+  const [blockEnd, setBlockEnd] = useState("latest");
+
+  const [deliveryInfoError, setDeliveryInfoError] = useState("");
+  const [deliveryInfos, setDeliveryInfos] = useState<DeliveryTargetInfo[]>([]);
+  const [isLoadingDeliveryInfo, setIsLoadingDeliveryInfo] = useState(false);
+
+  const onPullDeliveryInfo = async () => {
+    setIsLoadingDeliveryInfo(true);
+    setDeliveryInfoError("");
+    setDeliveryInfos([]);
+
+    const start = parseInt(blockStart);
+    const end = blockEnd === "latest" ? "latest" : parseInt(blockEnd);
+
+    if (isNaN(start) || (end !== "latest" && isNaN(end))) {
+      setDeliveryInfoError("Invalid block number");
+      setIsLoadingDeliveryInfo(false);
+      return;
+    }
+
+    try {
+      const deliveryInfos = await getDeliveryStatusByVaa(
+        environment,
+        deliveryVaa,
+        start,
+        end
+      );
+
+      if (deliveryInfos == null) {
+        setDeliveryInfoError(
+          "No Delivery Infos were found within the given range"
+        );
+        setIsLoadingDeliveryInfo(false);
+        return;
+      } else {
+        setDeliveryInfos(deliveryInfos);
+        setIsLoadingDeliveryInfo(false);
+      }
+    } catch (e: any) {
+      setDeliveryInfoError(e.message || "An error occurred.");
+      setIsLoadingDeliveryInfo(false);
+    }
+  };
+
+  return (
+    <div style={{ margin: "10px", padding: "10px" }}>
+      <Typography variant="h6">Pull Delivery Info</Typography>
+      <Divider />
+      <TextField
+        label="Block Start"
+        value={blockStart}
+        onChange={(e) => setBlockStart(e.target.value)}
+        style={{ margin: "10px" }}
+      />
+      <TextField
+        label="Block End"
+        value={blockEnd}
+        onChange={(e) => setBlockEnd(e.target.value)}
+        style={{ margin: "10px" }}
+      />
+      <Button
+        onClick={onPullDeliveryInfo}
+        disabled={isLoadingDeliveryInfo}
+        variant="contained"
+        style={{ margin: "10px" }}
+      >
+        Pull Delivery Info
+      </Button>
+      {deliveryInfoError && <Typography>{deliveryInfoError}</Typography>}
+      {isLoadingDeliveryInfo && <CircularProgress />}
+      {deliveryInfos.map((info) => {
+        return <DeliveryInfoDisplay info={info} />;
+      })}
+    </div>
+  );
+}
+
+export function DeliveryInfoDisplay({ info }: { info: DeliveryTargetInfo }) {
+  return (
+    <div style={{ padding: "10px" }}>
+      <Divider />
+      <Typography>{"GasUsed: " + info.gasUsed.toString()}</Typography>
+      <Typography>
+        {"New Execution Info: " +
+          info.overrides?.newExecutionInfo?.toString("hex")}
+      </Typography>
+      <Typography>
+        {"New Receiver Value: " + info.overrides?.newReceiverValue.toString()}
+      </Typography>
+      <Typography>
+        {"Redelivery Hash: " + info.overrides?.redeliveryHash?.toString("hex")}
+      </Typography>
+      <Typography>{"Refund Status: " + info.refundStatus}</Typography>
+      <Typography>{"Revert String: " + info.revertString}</Typography>
+      <Typography>{"Source Chain: " + info.sourceChain}</Typography>
+      <Typography>
+        {"Source VAA Seq: " + info.sourceVaaSequence?.toString()}
+      </Typography>
+      <Typography>{"Status: " + info.status}</Typography>
+      <Typography>{"TxHash: " + info.transactionHash}</Typography>
+      <Typography>{"Vaa Hash: " + info.vaaHash}</Typography>
+    </div>
+  );
+}
+
+export function ManualDeliverDeliveryVaa({ rawVaa }: { rawVaa: Uint8Array }) {
+  const deliveryVaa = parseVaa(rawVaa);
+  const deliveryInstruction = parseGenericRelayerVaa(
+    deliveryVaa
+  ) as DeliveryInstruction;
+  const { environment } = useEnvironment();
+
+  const [manualDeliverError, setManualDeliverError] = useState("");
+  const [isManualDelivering, setIsManualDelivering] = useState(false);
+  const [manualDeliverTxHash, setManualDeliverTxHash] = useState("");
+
+  const {
+    connect,
+    disconnect,
+    provider,
+    chainId,
+    signer,
+    signerAddress,
+    providerError,
+  } = useEthereumProvider();
+
+  const targetChainInfo = getChainInfo(
+    environment,
+    deliveryInstruction.targetChainId as ChainId
+  );
+  const walletIsConnected = !!signer;
+  const correctChain =
+    walletIsConnected && targetChainInfo.evmNetworkId === chainId;
+  //TODO this
+  const overrides = null;
+
+  const onManualDeliver = useCallback(async () => {
+    setIsManualDelivering(true);
+    setManualDeliverError("");
+
+    if (!walletIsConnected || !correctChain || !signer || !signerAddress) {
+      setManualDeliverError(
+        "Wallet is not connected to the correct EVM network"
+      );
+      setIsManualDelivering(false);
+      return;
+    }
+
+    try {
+      const tx = await manualDeliver(
+        environment,
+        targetChainInfo,
+        rawVaa,
+        signer,
+        signerAddress,
+        overrides || undefined
+      );
+
+      //for some reason I'm seeing transactionHash on the actual runtime object after debugging.
+      //@ts-ignore
+      setManualDeliverTxHash((tx.hash || tx.transactionHash) as string);
+      setIsManualDelivering(false);
+    } catch (e: any) {
+      setManualDeliverError(e.message || "An error occurred.");
+      setIsManualDelivering(false);
+    }
+  }, [
+    walletIsConnected,
+    correctChain,
+    signer,
+    signerAddress,
+    environment,
+    targetChainInfo,
+    rawVaa,
+    overrides,
+  ]);
+
+  return (
+    <div style={{ margin: "10px", padding: "10px" }}>
+      <Typography variant="h6">Manual Deliver</Typography>
+      <Button
+        onClick={onManualDeliver}
+        disabled={!correctChain || isManualDelivering}
+        variant="contained"
+        style={{ margin: "10px" }}
+      >
+        Manual Deliver
+      </Button>
+      {!correctChain && (
+        <Typography>
+          Wallet is not connected to the correct EVM network
+        </Typography>
+      )}
+      {!correctChain && (
+        <Typography>
+          Expected EVM Network: {targetChainInfo.evmNetworkId + " "}
+          Actual EVM Network: {chainId}
+        </Typography>
+      )}
+      {!correctChain && !walletIsConnected && (
+        <Typography>Wallet is not connected</Typography>
+      )}
+      {providerError && (
+        <Typography>{"Provider Error: " + providerError}</Typography>
+      )}
+      {manualDeliverError && <Typography>{manualDeliverError}</Typography>}
+      {isManualDelivering && <CircularProgress />}
+      {manualDeliverTxHash && (
+        <Typography>
+          {"Successfully landed the delivery: " + manualDeliverTxHash}
+        </Typography>
+      )}
     </div>
   );
 }

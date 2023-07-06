@@ -8,6 +8,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
 import { ContractStateProvider } from "./context/ContractStateContext";
 import { EthereumProviderProvider } from "./context/EthereumProviderContext";
+import { EnvironmentProvider } from "./context/EnvironmentContext";
 
 function App() {
   //TODO persisted log watcher object
@@ -15,13 +16,15 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LoggerProvider>
-        <EthereumProviderProvider>
-          <ContractStateProvider>
-            <ContractStateInternals />
-          </ContractStateProvider>
-        </EthereumProviderProvider>
-      </LoggerProvider>
+      <EnvironmentProvider>
+        <LoggerProvider>
+          <EthereumProviderProvider>
+            <ContractStateProvider>
+              <ContractStateInternals />
+            </ContractStateProvider>
+          </EthereumProviderProvider>
+        </LoggerProvider>
+      </EnvironmentProvider>
     </ThemeProvider>
   );
 }

@@ -11,8 +11,8 @@ import { get } from "http";
 import { BigNumber } from "ethers";
 import {
   ChainInfo,
+  Environment,
   getChainInfo,
-  getEnvironment,
   getEthersProvider,
 } from "../utils/environment";
 import { ethers } from "ethers";
@@ -22,8 +22,10 @@ import {
   WormholeRelayer,
   WormholeRelayer__factory,
 } from "@certusone/wormhole-sdk/lib/cjs/ethers-contracts";
+import { useEnvironment } from "./EnvironmentContext";
 
 export type WormholeRelayerContractState = {
+  network: string;
   chainId: number;
   contractAddress: string;
   defaultProvider: string;
@@ -31,6 +33,7 @@ export type WormholeRelayerContractState = {
 };
 
 export type DeliveryProviderContractState = {
+  network: string;
   chainId: number;
   contractAddress: string;
   rewardAddress: string;
@@ -82,6 +85,7 @@ export const ContractStateProvider = ({
 }) => {
   //must be nested below the logger context
   const { log, clear, logs } = useLogger();
+  const { environment } = useEnvironment();
   const [relayerContractStates, setRelayerContractStates] = useState<
     WormholeRelayerContractState[]
   >([]);
@@ -95,22 +99,32 @@ export const ContractStateProvider = ({
         RELAYER_CONTEXT
       );
 
-      const cached = relayerContractStates.find(
-        (state) => state.chainId === chainId
-      );
+      const cached = relayerContractStates.find((state) => {
+        return (
+          state.chainId.toString() === chainId.toString() &&
+          state.network === environment.network
+        );
+      });
+
+      console.log("relayerContractStates", relayerContractStates);
 
       if (cached && !forceRefresh) {
         return cached;
       } else {
+        log(
+          "Cache miss on getRelayerContract, fetching from chain",
+          RELAYER_CONTEXT
+        );
         const state: WormholeRelayerContractState = await fetchRelayerContract(
-          getChainInfo(chainId),
+          environment,
+          getChainInfo(environment, chainId),
           log
         );
         setRelayerContractStates((old) => [...old, state]);
         return state;
       }
     },
-    [log]
+    [log, environment]
   );
 
   const getDeliveryProviderContractState = useCallback(
@@ -121,19 +135,29 @@ export const ContractStateProvider = ({
       );
 
       const cached = deliveryProviderContractStates.find(
-        (state) => state.chainId === chainId
+        (state) =>
+          state.chainId.toString() === chainId.toString() &&
+          state.network === environment.network
       );
 
       if (cached && !forceRefresh) {
         return cached;
       } else {
+        log(
+          "Cache miss on getDeliveryProviderContractState, fetching from chain",
+          DELIVERY_PROVIDER_CONTEXT
+        );
         const state: DeliveryProviderContractState =
-          await fetchDeliveryProviderContractState(getChainInfo(chainId), log);
+          await fetchDeliveryProviderContractState(
+            environment,
+            getChainInfo(environment, chainId),
+            log
+          );
         setDeliveryProviderContractStates((old) => [...old, state]);
         return state;
       }
     },
-    [log]
+    [log, environment]
   );
 
   const contextValue = useMemo(
@@ -157,6 +181,7 @@ export const useContractState = () => {
 
 //This code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
 async function fetchRelayerContract(
+  environment: Environment,
   chainInfo: ChainInfo,
   log?: (
     value: string,
@@ -165,7 +190,6 @@ async function fetchRelayerContract(
   ) => void
 ): Promise<WormholeRelayerContractState> {
   try {
-    const env = getEnvironment();
     const contractAddress = chainInfo.relayerContractAddress;
     log && log("Querying " + contractAddress, RELAYER_CONTEXT);
 
@@ -181,7 +205,7 @@ async function fetchRelayerContract(
     const registeredContracts: { chainId: number; contract: string }[] = [];
 
     log && log("Querying registered contracts", RELAYER_CONTEXT);
-    for (const chainInfo of env.chainInfos) {
+    for (const chainInfo of environment.chainInfos) {
       registeredContracts.push({
         chainId: chainInfo.chainId,
         contract: (
@@ -206,6 +230,7 @@ async function fetchRelayerContract(
         RELAYER_CONTEXT
       );
     return {
+      network: environment.network,
       chainId: chainInfo.chainId,
       contractAddress,
       defaultProvider,
@@ -234,6 +259,7 @@ export async function getWormholeRelayer(
 
 //this code is adapted from the ethereum/ts-scripts folder in the wormhole monorepo
 async function fetchDeliveryProviderContractState(
+  environment: Environment,
   chainInfo: ChainInfo,
   log?: (
     value: string,
@@ -249,7 +275,6 @@ async function fetchDeliveryProviderContractState(
     );
 
   try {
-    const env = getEnvironment();
     const provider = getEthersProvider(chainInfo);
     const deliveryProvider = await getDeliveryProviderContract(
       chainInfo,
@@ -301,7 +326,7 @@ async function fetchDeliveryProviderContractState(
     const rewardAddress = await deliveryProvider.getRewardAddress();
     log && log("Reward address: " + rewardAddress, DELIVERY_PROVIDER_CONTEXT);
 
-    for (const chainInfo of env.chainInfos) {
+    for (const chainInfo of environment.chainInfos) {
       log &&
         log(
           "Querying isSupported chain " + chainInfo.chainId,
@@ -412,6 +437,7 @@ async function fetchDeliveryProviderContractState(
     }
 
     return {
+      network: environment.network,
       chainId: chainInfo.chainId,
       contractAddress,
       rewardAddress,

@@ -1,17 +1,17 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
-import { getEnvironment } from "../utils/environment";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { useEffect, useState } from "react";
+import { useEnvironment } from "../context/EnvironmentContext";
 
 export default function ChainSelector(props: {
   onChainSelected: (chainId: ChainId) => void;
 }) {
-  const env = getEnvironment();
+  const { environment } = useEnvironment();
   const [selectedValue, setSelectedValue] = useState<ChainId>(
-    env.chainInfos[0].chainId
+    environment.chainInfos[0].chainId
   );
 
-  const allChains = env.chainInfos.map((chainInfo) => {
+  const allChains = environment.chainInfos.map((chainInfo) => {
     return (
       <MenuItem value={chainInfo.chainId}>
         {chainInfo.chainId + " - " + chainInfo.chainName}

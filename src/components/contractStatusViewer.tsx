@@ -7,18 +7,18 @@ import {
   Typography,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { getChainInfo, getEnvironment } from "../utils/environment";
+import { getChainInfo } from "../utils/environment";
 import {
   DeliveryProviderContractState,
   WormholeRelayerContractState,
   useContractState,
 } from "../context/ContractStateContext";
 import { useCallback, useEffect, useState } from "react";
-import { get } from "http";
 import { ChainId } from "@certusone/wormhole-sdk";
+import { useEnvironment } from "../context/EnvironmentContext";
 
 export default function ContractStates() {
-  const environment = getEnvironment();
+  const { environment } = useEnvironment();
 
   const allChains = environment.chainInfos.map((chainInfo) => {
     return <SingleChainViewer chainId={chainInfo.chainId} />;
@@ -33,6 +33,7 @@ export default function ContractStates() {
 }
 
 function SingleChainViewer(props: { chainId: number }) {
+  const { environment } = useEnvironment();
   const [error, setError] = useState("");
   const [relayerLoading, setRelayerLoading] = useState(false);
   const [deliveryProviderLoading, setDeliveryProviderLoading] = useState(false);
@@ -43,11 +44,10 @@ function SingleChainViewer(props: { chainId: number }) {
   const { getRelayerContract, getDeliveryProviderContractState } =
     useContractState();
 
-  const chainInfo = getChainInfo(props.chainId as ChainId);
+  const chainInfo = getChainInfo(environment, props.chainId as ChainId);
 
   const onExpand = useCallback(
     (event: any, expanded: boolean) => {
-      console.log("expanded", expanded);
       if (expanded) {
         setRelayerLoading(true);
         setDeliveryProviderLoading(true);
@@ -101,7 +101,9 @@ function SingleChainViewer(props: { chainId: number }) {
       <DisplayContracts relayer={relayer} deliveryProvider={deliveryProvider} />
     );
   } else {
-    displayedContent = <Typography>Unexpected Error Occurred</Typography>;
+    displayedContent = (
+      <Typography>Close and open to reload content</Typography>
+    );
   }
 
   return (

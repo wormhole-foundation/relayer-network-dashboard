@@ -7,20 +7,30 @@ import {
   parseVaa,
   relayer,
   tryNativeToHexString,
+  tryUint8ArrayToNative,
 } from "@certusone/wormhole-sdk";
 import { ChainInfo, Environment, getEthersProvider } from "./environment";
 import {
   DeliveryInfo,
   DeliveryInstruction,
+  DeliveryOverrideArgs,
   RedeliveryInstruction,
   RelayerPayloadId,
   getWormholeRelayerInfoBySourceSequence,
+  packOverrides,
+  parseEVMExecutionInfoV1,
   parseWormholeRelayerPayloadType,
   parseWormholeRelayerResend,
   parseWormholeRelayerSend,
+  vaaKeyPrintable,
 } from "@certusone/wormhole-sdk/lib/cjs/relayer";
-import { Implementation__factory } from "@certusone/wormhole-sdk/lib/cjs/ethers-contracts";
+import {
+  Implementation__factory,
+  WormholeRelayer__factory,
+} from "@certusone/wormhole-sdk/lib/cjs/ethers-contracts";
 import { ethers } from "ethers";
+import { getWormholeRelayer } from "../context/ContractStateContext";
+import { createTxRawEIP712 } from "@injectivelabs/sdk-ts";
 export type WormholeTransaction = {
   chainId: ChainId;
   txHash: string;
@@ -30,18 +40,26 @@ export async function getGenericRelayerVaasFromTransaction(
   environment: Environment,
   chainInfo: ChainInfo,
   txHash: string
-): Promise<ParsedVaa[]> {
+): Promise<Uint8Array[]> {
   const vaas = await getAllVaasFromTransaction(environment, txHash, chainInfo);
 
   const parsedVaas = vaas.map((vaa) => {
     return parseVaa(vaa);
   });
 
-  const filtered = parsedVaas.filter((vaa) => {
-    return (
+  let indexes: number[] = [];
+
+  parsedVaas.forEach((vaa, index) => {
+    if (
       vaa.emitterAddress.toString("hex") ===
       tryNativeToHexString(chainInfo.relayerContractAddress, "ethereum")
-    );
+    ) {
+      indexes.push(index);
+    }
+  });
+
+  const filtered = vaas.filter((vaa, index) => {
+    return indexes.includes(index);
   });
 
   return filtered;
@@ -52,7 +70,7 @@ export async function getVaa(
   chainInfo: ChainInfo,
   emitterAddress: string,
   sequence: string
-): Promise<ParsedVaa | null> {
+): Promise<Uint8Array | null> {
   const vaa = await getSignedVAAWithRetry(
     environment.guardianRpcs,
     chainInfo.chainId,
@@ -65,7 +83,7 @@ export async function getVaa(
   if (!vaa) {
     return null;
   } else {
-    return parseVaa(vaa.vaaBytes);
+    return vaa.vaaBytes;
   }
 }
 
@@ -172,7 +190,9 @@ export async function getDeliveryStatus(
 
 export async function getDeliveryStatusByVaa(
   env: Environment,
-  vaa: ParsedVaa
+  vaa: ParsedVaa,
+  blockstart: number,
+  blockend: number | "latest"
 ): Promise<relayer.DeliveryTargetInfo[]> {
   const instruction = parseGenericRelayerVaa(vaa);
   const deliveryInstruction = instruction as DeliveryInstruction;
@@ -189,7 +209,9 @@ export async function getDeliveryStatusByVaa(
   if (!targetChainProvider) {
     throw new Error("No target chain provider found");
   }
-  const blockNumbers = [-2040, "latest"];
+  //defaults
+  //const blockNumbers = [-2040, "latest"];
+
   const targetWormholeRelayerContractAddress = env.chainInfos.find(
     (c) => c.chainId === deliveryInstruction.targetChainId
   )?.relayerContractAddress;
@@ -203,8 +225,8 @@ export async function getDeliveryStatusByVaa(
     targetChainProvider,
     CHAIN_ID_TO_NAME[vaa.emitterChain as ChainId],
     ethers.BigNumber.from(vaa.sequence),
-    blockNumbers[0],
-    blockNumbers[1],
+    blockstart,
+    blockend,
     targetWormholeRelayerContractAddress
   );
 
@@ -230,4 +252,108 @@ export function isRedelivery(
   instruction: DeliveryInstruction | RedeliveryInstruction
 ): boolean {
   return instruction.hasOwnProperty("newSenderAddress");
+}
+
+export async function manualDeliver(
+  environment: Environment,
+  chainInfo: ChainInfo,
+  rawDeliveryVaa: Uint8Array | Buffer,
+  signer: ethers.Signer,
+  relayerRefundAddress: string,
+  overrides?: DeliveryOverrideArgs
+): Promise<ethers.providers.TransactionResponse> {
+  const deliveryInstructionVaa = parseVaa(rawDeliveryVaa);
+  const delivery = parseGenericRelayerVaa(
+    deliveryInstructionVaa
+  ) as DeliveryInstruction;
+
+  //This code is blatantly stolen from the relayer code
+  if (
+    delivery.vaaKeys.findIndex(
+      (m) => !m.emitterAddress || !m.sequence || !m.chainId
+    ) != -1
+  ) {
+    throw new Error(`Received an invalid additional VAA key`);
+  }
+  const vaaKeysString = delivery.vaaKeys.map((m) => vaaKeyPrintable(m));
+  console.log(`Fetching vaas from parsed delivery vaa manifest...`, {
+    vaaKeys: vaaKeysString,
+  });
+
+  const vaaIds = delivery.vaaKeys.map((m) => ({
+    emitterAddress: m.emitterAddress!,
+    emitterChain: m.chainId! as ChainId,
+    sequence: m.sequence!.toBigInt(),
+  }));
+
+  let results: Uint8Array[] = [];
+
+  try {
+    for (let i = 0; i < vaaIds.length; i++) {
+      const vaaId = vaaIds[i];
+      const vaa = await getSignedVAAWithRetry(
+        environment.guardianRpcs,
+        CHAIN_ID_TO_NAME[vaaId.emitterChain],
+        //emitter address is a buffer => uint8Array => wh string
+        tryUint8ArrayToNative(vaaId.emitterAddress, "ethereum"),
+        vaaId.sequence.toString(),
+        {},
+        1000,
+        5
+      );
+      results.push(vaa.vaaBytes);
+    }
+  } catch (e: any) {
+    console.error(`Failed while attempting to pull additional VAAs: ${e}`);
+    throw e;
+  }
+
+  const receiverValue = overrides?.newReceiverValue
+    ? overrides.newReceiverValue
+    : delivery.requestedReceiverValue.add(delivery.extraReceiverValue);
+  const getMaxRefund = (encodedDeliveryInfo: Buffer) => {
+    const [deliveryInfo] = parseEVMExecutionInfoV1(encodedDeliveryInfo, 0);
+    return deliveryInfo.targetChainRefundPerGasUnused.mul(
+      deliveryInfo.gasLimit
+    );
+  };
+  const maxRefund = getMaxRefund(
+    overrides?.newExecutionInfo
+      ? overrides.newExecutionInfo
+      : delivery.encodedExecutionInfo
+  );
+  const budget = receiverValue.add(maxRefund);
+
+  try {
+    const wormholeRelayer = WormholeRelayer__factory.connect(
+      chainInfo.relayerContractAddress,
+      signer
+    );
+
+    //TODO properly import this type from the SDK for safety
+    const input: any = {
+      encodedVMs: results,
+      encodedDeliveryVAA: rawDeliveryVaa,
+      relayerRefundAddress: relayerRefundAddress,
+      overrides: overrides ? packOverrides(overrides) : [],
+    };
+
+    const receipt = await wormholeRelayer
+      .deliver(
+        input.encodedVMs,
+        input.encodedDeliveryVAA,
+        input.relayerRefundAddress,
+        input.overrides,
+        {
+          value: budget,
+          gasLimit: 3000000,
+        }
+      ) //TODO more intelligent gas limit
+      .then((x: any) => x.wait());
+
+    return receipt;
+  } catch (e: any) {
+    console.error(`Failed to deliver: ${e}`);
+    throw e;
+  }
 }
