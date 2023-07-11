@@ -1,4 +1,4 @@
-import { Button, makeStyles, Tooltip } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
 
 const ToggleConnectedButton = ({
   connect,

@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 import { useLogger } from "./LoggerContext";
-import { get } from "http";
 import { BigNumber } from "ethers";
 import {
   ChainInfo,
@@ -52,7 +51,7 @@ export type DeliveryProviderContractState = {
   }[];
 };
 
-interface ContractStateContext {
+interface IContractStateContext {
   getRelayerContract(
     ChainId: ChainId,
     forceRefresh?: boolean
@@ -63,7 +62,7 @@ interface ContractStateContext {
   ): Promise<DeliveryProviderContractState>;
 }
 
-const ContractStateContext = React.createContext<ContractStateContext>({
+const ContractStateContext = React.createContext<IContractStateContext>({
   getRelayerContract: async (ChainId: ChainId, forceRefresh?: boolean) => {
     return null as any;
   },
@@ -84,7 +83,7 @@ export const ContractStateProvider = ({
   children: ReactNode;
 }) => {
   //must be nested below the logger context
-  const { log, clear, logs } = useLogger();
+  const { log } = useLogger();
   const { environment } = useEnvironment();
   const [relayerContractStates, setRelayerContractStates] = useState<
     WormholeRelayerContractState[]
@@ -124,7 +123,7 @@ export const ContractStateProvider = ({
         return state;
       }
     },
-    [log, environment]
+    [log, environment, relayerContractStates]
   );
 
   const getDeliveryProviderContractState = useCallback(
@@ -157,7 +156,7 @@ export const ContractStateProvider = ({
         return state;
       }
     },
-    [log, environment]
+    [log, environment, deliveryProviderContractStates]
   );
 
   const contextValue = useMemo(
@@ -165,7 +164,7 @@ export const ContractStateProvider = ({
       getRelayerContract,
       getDeliveryProviderContractState,
     }),
-    [logs, clear, log, getRelayerContract, getDeliveryProviderContractState]
+    [getRelayerContract, getDeliveryProviderContractState]
   );
 
   return (

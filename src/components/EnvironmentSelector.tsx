@@ -1,6 +1,4 @@
 import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
-import { ChainId } from "@certusone/wormhole-sdk";
-import { useEffect, useState } from "react";
 import { useEnvironment } from "../context/EnvironmentContext";
 
 export default function EnvironmentSelector() {

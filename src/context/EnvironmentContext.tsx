@@ -12,7 +12,6 @@ import {
   testnetEnv,
   mainnetEnv,
 } from "../utils/environment";
-import { clear } from "console";
 
 interface EnvironmentContext {
   environment: Environment;

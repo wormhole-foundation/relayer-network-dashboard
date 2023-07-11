@@ -1,8 +1,5 @@
 import { ChainId, ChainName, Network } from "@certusone/wormhole-sdk";
-import { NetworkCell } from "@mui/icons-material";
 import { ethers } from "ethers";
-
-let env: Environment | null = null;
 
 const MAINNET_RPCS: { [key in ChainName]?: string } = {
   ethereum: process.env.ETH_RPC || "https://rpc.ankr.com/eth",

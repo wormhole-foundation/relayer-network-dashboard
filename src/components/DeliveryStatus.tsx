@@ -1,8 +1,6 @@
 import {
   ChainId,
-  ParsedVaa,
   parseVaa,
-  relayer,
   tryNativeToHexString,
 } from "@certusone/wormhole-sdk";
 import { getChainInfo } from "../utils/environment";
@@ -20,7 +18,6 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  DeliveryInfo,
   DeliveryInstruction,
   DeliveryTargetInfo,
   RedeliveryInstruction,
@@ -33,7 +30,6 @@ import {
   manualDeliver,
   parseGenericRelayerVaa,
 } from "../utils/VaaUtils";
-import { env } from "process";
 import { useLogger } from "../context/LoggerContext";
 import { useEnvironment } from "../context/EnvironmentContext";
 import { useEthereumProvider } from "../context/EthereumProviderContext";
@@ -47,7 +43,7 @@ import { useEthereumProvider } from "../context/EthereumProviderContext";
 
 export default function DeliveryStatus() {
   const { environment } = useEnvironment();
-  const { log, clear, logs } = useLogger();
+  const { log } = useLogger();
   const [chain, setChain] = useState<ChainId>(
     environment.chainInfos[0].chainId
   );
@@ -59,7 +55,7 @@ export default function DeliveryStatus() {
   const [vaaRaw, setVaaRaw] = useState("");
 
   const targetContract = environment.chainInfos.find(
-    (c) => c.chainId == chain
+    (c) => c.chainId === chain
   )?.relayerContractAddress;
   const emitter = targetContract
     ? tryNativeToHexString(targetContract, "ethereum")
@@ -197,7 +193,7 @@ export default function DeliveryStatus() {
     } else {
       setError("Invalid query type");
     }
-  }, [txHash, sequence, emitter, chain, vaaRaw, environment, queryType]);
+  }, [txHash, sequence, emitter, chain, vaaRaw, environment, queryType, log]);
 
   const vaaReaders = vaaResults.length > 0 && (
     <div style={{ margin: "10px" }}>
@@ -212,7 +208,7 @@ export default function DeliveryStatus() {
       <Typography variant="h5">Search for Delivery VAAs</Typography>
       <div style={{ display: "flex", margin: "10px" }}>
         {toggler}
-        {(queryType == "txHash" || queryType == "EmitterSeq") && (
+        {(queryType === "txHash" || queryType === "EmitterSeq") && (
           <ChainSelector onChainSelected={setChain} />
         )}
         {queryType === "EmitterSeq" && (
@@ -535,15 +531,8 @@ export function ManualDeliverDeliveryVaa({ rawVaa }: { rawVaa: Uint8Array }) {
   const [isManualDelivering, setIsManualDelivering] = useState(false);
   const [manualDeliverTxHash, setManualDeliverTxHash] = useState("");
 
-  const {
-    connect,
-    disconnect,
-    provider,
-    chainId,
-    signer,
-    signerAddress,
-    providerError,
-  } = useEthereumProvider();
+  const { chainId, signer, signerAddress, providerError } =
+    useEthereumProvider();
 
   const targetChainInfo = getChainInfo(
     environment,

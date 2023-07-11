@@ -1,16 +1,11 @@
-import { useLogger } from "../context/LoggerContext";
 import LogViewer from "../components/logViewer";
 import ContractStates from "../components/contractStatusViewer";
 import DeliveryStatus from "../components/DeliveryStatus";
 import EthereumSignerKey from "../components/EthereumSignerKey";
 import EnvironmentSelector from "../components/EnvironmentSelector";
-import { Paper, Typography } from "@mui/material";
-import { useEnvironment } from "../context/EnvironmentContext";
-import { useEffect } from "react";
+import { Paper } from "@mui/material";
 
 export default function ContractStateView() {
-  const { environment } = useEnvironment();
-
   //TODO chain selector
 
   //TODO load button

@@ -27,7 +27,7 @@ export default function ChainSelector(props: {
 
   useEffect(() => {
     props.onChainSelected(selectedValue);
-  }, []);
+  }, [props, selectedValue]);
 
   return (
     <FormControl style={{ margin: "10px", minWidth: "150px" }}>

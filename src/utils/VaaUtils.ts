@@ -29,8 +29,6 @@ import {
   WormholeRelayer__factory,
 } from "@certusone/wormhole-sdk/lib/cjs/ethers-contracts";
 import { ethers } from "ethers";
-import { getWormholeRelayer } from "../context/ContractStateContext";
-import { createTxRawEIP712 } from "@injectivelabs/sdk-ts";
 export type WormholeTransaction = {
   chainId: ChainId;
   txHash: string;
@@ -102,7 +100,7 @@ export function parseGenericRelayerPayloads(
 ): (DeliveryInstruction | RedeliveryInstruction)[] {
   const output = payloads.map((payload) => {
     const payloadId = parseWormholeRelayerPayloadType(payload);
-    return payloadId == RelayerPayloadId.Delivery
+    return payloadId === RelayerPayloadId.Delivery
       ? parseWormholeRelayerSend(payload)
       : parseWormholeRelayerResend(payload);
   });
@@ -271,7 +269,7 @@ export async function manualDeliver(
   if (
     delivery.vaaKeys.findIndex(
       (m) => !m.emitterAddress || !m.sequence || !m.chainId
-    ) != -1
+    ) !== -1
   ) {
     throw new Error(`Received an invalid additional VAA key`);
   }

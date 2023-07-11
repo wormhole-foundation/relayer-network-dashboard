@@ -2,7 +2,6 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Button,
   Paper,
   Typography,
 } from "@mui/material";
@@ -13,7 +12,7 @@ import {
   WormholeRelayerContractState,
   useContractState,
 } from "../context/ContractStateContext";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ChainId } from "@certusone/wormhole-sdk";
 import { useEnvironment } from "../context/EnvironmentContext";
 

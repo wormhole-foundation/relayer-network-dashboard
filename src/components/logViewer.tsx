@@ -8,16 +8,16 @@ import { Button } from "@mui/material";
 import { useLogger } from "../context/LoggerContext";
 
 export default function LogViewer() {
-  const { log, clear, logs } = useLogger();
+  const { clear, logs } = useLogger();
 
   const logContent = logs.map((log, index) => {
     return (
       <Typography
         key={index}
         style={
-          log.type == "error"
+          log.type === "error"
             ? { color: "red" }
-            : log.type == "success"
+            : log.type === "success"
             ? { color: "green" }
             : {}
         }
