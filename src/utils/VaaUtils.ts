@@ -41,6 +41,8 @@ export async function getGenericRelayerVaasFromTransaction(
 ): Promise<Uint8Array[]> {
   const vaas = await getAllVaasFromTransaction(environment, txHash, chainInfo);
 
+  console.log("vaas found during transaction: " + vaas.length);
+
   const parsedVaas = vaas.map((vaa) => {
     return parseVaa(vaa);
   });
@@ -129,10 +131,16 @@ export async function getAllVaasFromTransaction(
   //Get the transaction receipt
   const receipt = await provider.getTransactionReceipt(txHash);
 
+  console.log("receipt logs : " + JSON.stringify(receipt.logs));
+
   //pull all the logs from the bridge transaction
   const bridgeLogs = receipt.logs.filter((l) => {
-    return l.address === chainInfo.coreBridgeAddress;
+    return (
+      l.address.toLowerCase() === chainInfo.coreBridgeAddress.toLowerCase()
+    );
   });
+
+  console.log("bridge logs: " + bridgeLogs.length);
 
   const keys = bridgeLogs.map((bridgeLog) => {
     const {

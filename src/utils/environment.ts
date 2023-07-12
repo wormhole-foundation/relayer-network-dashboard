@@ -1,4 +1,9 @@
-import { ChainId, ChainName, Network } from "@certusone/wormhole-sdk";
+import {
+  CONTRACTS,
+  ChainId,
+  ChainName,
+  Network,
+} from "@certusone/wormhole-sdk";
 import { ethers } from "ethers";
 
 const MAINNET_RPCS: { [key in ChainName]?: string } = {
@@ -184,7 +189,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.ethereum.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.ethereum || "",
     },
@@ -198,7 +203,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.bsc.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.bsc || "",
     },
@@ -212,7 +217,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.polygon.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.polygon || "",
     },
@@ -226,7 +231,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.avalanche.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.avalanche || "",
     },
@@ -240,7 +245,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.fantom.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.fantom || "",
     },
@@ -268,7 +273,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.klaytn.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.klaytn || "",
     },
@@ -282,7 +287,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.celo.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.celo || "",
     },
@@ -296,7 +301,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.moonbeam.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.moonbeam || "",
     },
@@ -310,7 +315,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.arbitrum.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.arbitrum || "",
     },
@@ -324,7 +329,7 @@ export const mainnetEnv: Environment = {
       relayerContractAddress: "0x27428DD2d3DD32A4D7f7C497eAaa23130d894911",
       defaultDeliveryProviderContractAddress:
         "0x7A0a53847776f7e94Cc35742971aCb2217b0Db81",
-      coreBridgeAddress: "",
+      coreBridgeAddress: CONTRACTS.MAINNET.optimism.core,
       mockIntegrationAddress: "",
       rpcUrl: MAINNET_RPCS.optimism || "",
     },
