@@ -24,7 +24,7 @@ const MAINNET_RPCS: { [key in ChainName]?: string } = {
   aptos: "https://fullnode.mainnet.aptoslabs.com/",
   near: "https://rpc.mainnet.near.org",
   xpla: "https://dimension-lcd.xpla.dev",
-  terra2: "https://phoenix-lcd.terra.dev",
+  terra2: "https://lcd-terra.tfl.foundation",
   terra: "https://terra-classic-fcd.publicnode.com",
   injective: "https://api.injective.network",
   solana: process.env.SOLANA_RPC ?? "https://api.mainnet-beta.solana.com",
